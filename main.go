@@ -74,7 +74,7 @@ var (
 func main() {
 	// registers any flags that underlying libraries might us
 	rootCmd := cmd.NewRootCommand()
-	rootCmd.SetArgs(flag.Args())
+	rootCmd.SetArgs(flag.Args()) // TODO should this be used?
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

@@ -50,6 +50,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-operator/internal/manifests"
 	"github.com/open-telemetry/opentelemetry-operator/internal/manifests/collector/testdata"
 	"github.com/open-telemetry/opentelemetry-operator/pkg/autodetect"
+	"github.com/open-telemetry/opentelemetry-operator/pkg/cmd"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -107,20 +108,43 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	// start webhook server using Manager
+	rootCmd := cmd.NewRootCommand()
+	rootCmd.SetArgs([]string{}) // TODO start here << right here! this is up to date!
+
+	// Error: unknown flag: --metrics-addr
+	// e2e tests are mad about flags
+	// TODO - we should still accept the original flags
+
+	// properly configure TLS
+	// -> failed to start manager: open
+	// /var/folders/8k/6hn35qkn6rdffqrvykzt4vwm0000gn/T/k8s-webhook-server/serving-certs/tls.crt: no such file or directory
+	// envTest environment needs to share the TLS config
+	// envTest has the default TLS config (no cert?) - so we just need to disable TLS on the operator
+	// chill the F out otel
+
+	// continue adding params until test passes
+	// -> how does mgrOptions get populated? how does tempo do this?
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Printf("failed to start create root command: %v", err)
+		os.Exit(1)
+	}
+
+	rootCmdConfig := rootCmd.Context().Value(cmd.RootConfigKey{}).(cmd.RootConfig)
+	mgrOptions := rootCmdConfig.Options
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
-	mgr, mgrErr := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:         testScheme,
-		LeaderElection: false,
-		WebhookServer: webhook.NewServer(webhook.Options{
-			Host:    webhookInstallOptions.LocalServingHost,
-			Port:    webhookInstallOptions.LocalServingPort,
-			CertDir: webhookInstallOptions.LocalServingCertDir,
-		}),
-		Metrics: metricsserver.Options{
-			BindAddress: "0",
-		},
+	mgrOptions.LeaderElection = false
+	mgrOptions.WebhookServer = webhook.NewServer(webhook.Options{
+		Host:    webhookInstallOptions.LocalServingHost,
+		Port:    webhookInstallOptions.LocalServingPort,
+		CertDir: webhookInstallOptions.LocalServingCertDir,
 	})
+	mgrOptions.Metrics = metricsserver.Options{
+		BindAddress: "0",
+	}
+
+	// start webhook server using Manager
+	mgr, mgrErr := ctrl.NewManager(cfg, mgrOptions)
 	if mgrErr != nil {
 		fmt.Printf("failed to start webhook server: %v", mgrErr)
 		os.Exit(1)

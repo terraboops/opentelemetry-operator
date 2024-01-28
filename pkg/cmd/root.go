@@ -123,6 +123,10 @@ func NewRootCommand() *cobra.Command {
 		"The controller will load its initial configuration from this file. "+
 			"Omit this flag to use the default configuration values. "+
 			"Command-line flags override configuration from this file.")
+	rootCmd.PersistentFlags().StringVar(&configFile, "config", "",
+		"The controller will load its initial configuration from this file. "+
+			"Omit this flag to use the default configuration values. "+
+			"Command-line flags override configuration from this file.")
 	readConfig(rootCmd, configFile, version.Get())
 
 	return rootCmd
